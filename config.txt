@@ -1,0 +1,10 @@
+numeroUsuarios=2
+baseEventos=3
+numeroGestores=2
+tamanoBuzon=4
+tamanoZonaEspera=3
+procesadores=8
+memoriaGiB=16
+paginaKiB=4
+almacenamientoGiB=32
+bloqueKiB=4
