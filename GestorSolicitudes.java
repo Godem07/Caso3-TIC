@@ -27,37 +27,41 @@ public class GestorSolicitudes extends Thread {
         this.maquinasCreadas = maquinasCreadas;
     }
 
-    @Override 
-    public void run(){
-
+    @Override
+    public void run() {
         while (true) {
 
-            if (zonaEspera.alcanzaUmbral()){
+            if (zonaEspera.alcanzaUmbral()) {
+                System.out.println("[" + getName() + "] umbral alcanzado (" + zonaEspera.pendientes() + " MVs en espera) -> ESPERA TOTAL");
                 zonaEspera.esperarVacia();
-
-            if (Thread.currentThread().isInterrupted()) {
-                return;
-            }            
+                System.out.println("[" + getName() + "] zona de espera vacía -> reanuda");
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 continue;
             }
 
             Solicitud solicitud = buzon.retirarSolicitud();
 
             if (solicitud == null) {
-
                 if (buzon.noUsuariosActivos()) {
+                    System.out.println("[" + getName() + "] TERMINA (no hay usuarios activos y el buzón está vacío)");
                     return;
-            }
-            Thread.yield();
-            continue;
+                }
+                Thread.yield();
+                continue;
             }
 
             MV mv = new MV(solicitud, controladorProcesadores, controladorMemoria, controladorAlmacenamiento, zonaEspera);
+            System.out.println("[" + getName() + "] creó MV para " + solicitud.getId());
             maquinasCreadas.add(mv);
             mv.start();
-
+            try {
+                mv.esperarPrimerIntento();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
-        
-    } 
-    
+    }    
 }

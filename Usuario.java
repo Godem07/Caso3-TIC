@@ -12,6 +12,7 @@ public class Usuario extends Thread{
 
 
     public Usuario(int id, Configuracion configuracion, BuzonEntrada buzon) {
+        super("Usuario-" + id);
         this.id = id;
         this.configuracion = configuracion;
         this.buzon = buzon;
@@ -39,7 +40,7 @@ public class Usuario extends Thread{
 
         int potencia = 1;
 
-        while (potencia * 2 < valorGenerado) {
+        while (potencia * 2 <= valorGenerado) {
             potencia *= 2;
             
         }
@@ -84,7 +85,7 @@ public class Usuario extends Thread{
                 );
 
                 buzon.depositarSolicitud(solicitud);
-
+                System.out.println("[" + getName() + "] depositó " + idSolicitud + " (procs=" + procesadores + ", mem=" + memoria + " GiB, alm=" + almacenamiento + " GiB)");
                 solicitudesHechas++;
             }
 
@@ -93,7 +94,7 @@ public class Usuario extends Thread{
             Thread.currentThread().interrupt();
 
         } finally {
-
+            System.out.println("[" + getName() + "] TERMINA (generó " + solicitudesHechas + " solicitudes)");
             buzon.registrarFinUsuario();
 
         }

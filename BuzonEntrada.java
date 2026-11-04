@@ -14,14 +14,14 @@ public class BuzonEntrada {
         this.usuariosActivos = usuariosActivos;
     }
 
-    public Solicitud getFirstSolicitud (){
-        return solicitudes.peek();
+    public synchronized boolean estaVacio() {
+        return solicitudes.isEmpty();
     }
-
 
     public synchronized void depositarSolicitud(Solicitud solicitud)throws InterruptedException{
 
         while (solicitudes.size() >= capacidad) {
+            System.out.println("[Buzón] lleno -> " + Thread.currentThread().getName() + " ESPERA");
             wait();
         }
 
@@ -31,7 +31,7 @@ public class BuzonEntrada {
     public synchronized Solicitud retirarSolicitud(){
 
         if (solicitudes.isEmpty()) {
-            return null;        //yield
+            return null;
             
         }
 
