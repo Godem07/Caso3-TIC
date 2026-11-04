@@ -1,24 +1,28 @@
+
 import java.util.List;
 
 public class GestorSolicitudes extends Thread {
 
-    private int id;
-    private Configuracion configuracion;
-    private BuzonEntrada buzon;
-    private ZonaEspera zonaEspera;
-    private ControladorProcesadores controladorProcesadores;
-    private ControladorMemoria controladorMemoria;
-    private ControladorAlmacenamiento controladorAlmacenamiento;
-    private List<MV> maquinasCreadas;
+    private final BuzonEntrada buzon;
+    private final ZonaEspera zonaEspera;
 
+    private final ControladorProcesadores controladorProcesadores;
+    private final ControladorMemoria controladorMemoria;
+    private final ControladorAlmacenamiento controladorAlmacenamiento;
 
-    public GestorSolicitudes(BuzonEntrada buzon, int id, ZonaEspera zonaEspera, Configuracion configuracion,
-         ControladorProcesadores controladorProcesadores, ControladorMemoria controladorMemoria, 
-         ControladorAlmacenamiento controladorAlmacenamiento, List<MV> maquinasCreadas) {
-        
+    private final List<MV> maquinasCreadas;
+
+    public GestorSolicitudes(
+            BuzonEntrada buzon,
+            int id,
+            ZonaEspera zonaEspera,
+            ControladorProcesadores controladorProcesadores,
+            ControladorMemoria controladorMemoria,
+            ControladorAlmacenamiento controladorAlmacenamiento,
+            List<MV> maquinasCreadas) {
+
         super("Gestor-" + id);
-        this.id = id;
-        this.configuracion = configuracion;
+
         this.buzon = buzon;
         this.zonaEspera = zonaEspera;
         this.controladorProcesadores = controladorProcesadores;
@@ -29,39 +33,81 @@ public class GestorSolicitudes extends Thread {
 
     @Override
     public void run() {
+
         while (true) {
 
-            if (zonaEspera.alcanzaUmbral()) {
-                System.out.println("[" + getName() + "] umbral alcanzado (" + zonaEspera.pendientes() + " MVs en espera) -> ESPERA TOTAL");
+            // 1. Intentar admitir una nueva MV
+            if (!zonaEspera.intentarAdmitir()) {
+
+                System.out.println(
+                    "[" + getName() + "] umbral alcanzado -> ESPERA TOTAL"
+                );
+
                 zonaEspera.esperarVacia();
-                System.out.println("[" + getName() + "] zona de espera vacía -> reanuda");
+
                 if (Thread.currentThread().isInterrupted()) {
                     return;
                 }
+
+                System.out.println(
+                    "[" + getName() + "] zona de espera vacía -> reanuda"
+                );
+
                 continue;
             }
 
+            // 2. Retirar una solicitud del buzón
             Solicitud solicitud = buzon.retirarSolicitud();
 
+            // 3. Comprobar si se obtuvo una solicitud
             if (solicitud == null) {
+
+                zonaEspera.cancelarAdmitir();
+
                 if (buzon.noUsuariosActivos()) {
-                    System.out.println("[" + getName() + "] TERMINA (no hay usuarios activos y el buzón está vacío)");
+
+                    System.out.println(
+                        "[" + getName() + "] TERMINA"
+                    );
+
                     return;
                 }
+
                 Thread.yield();
                 continue;
             }
 
-            MV mv = new MV(solicitud, controladorProcesadores, controladorMemoria, controladorAlmacenamiento, zonaEspera);
-            System.out.println("[" + getName() + "] creó MV para " + solicitud.getId());
-            maquinasCreadas.add(mv);
+            // 4. Crear la máquina virtual
+            MV mv = new MV(
+                solicitud,
+                controladorProcesadores,
+                controladorMemoria,
+                controladorAlmacenamiento,
+                zonaEspera
+            );
+
+            System.out.println(
+                "[" + getName() + "] creó MV para " + solicitud.getId()
+            );
+
+            // 5. Registrar la MV en la lista compartida
+            synchronized (maquinasCreadas) {
+                maquinasCreadas.add(mv);
+            }
+
+            // 6. Iniciar la máquina virtual
             mv.start();
+
+            // 7. Esperar hasta que termine su primer intento
             try {
+
                 mv.esperarPrimerIntento();
+
             } catch (InterruptedException e) {
+
                 Thread.currentThread().interrupt();
                 return;
             }
         }
-    }    
+    }
 }

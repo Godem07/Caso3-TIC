@@ -1,8 +1,9 @@
 public class ZonaEspera {
-    
+
     private final int umbral;
     private int version = 0;
     private int pendientes = 0;
+    private int enEvaluacion = 0;
 
     public ZonaEspera(int umbral) {
         this.umbral = umbral;
@@ -12,17 +13,24 @@ public class ZonaEspera {
         return version;
     }
 
-    public synchronized void entrar() { 
-        pendientes++;
-    }
-
     public synchronized void salir() {
         pendientes--;
         notifyAll();
     }
 
-    public synchronized void esperarCambio(int v) {
-        while (version == v) {
+    public synchronized boolean estaVacia() {
+
+        return pendientes == 0 && enEvaluacion == 0;
+    }
+    
+    public synchronized void despertarTodas() {
+        version++;
+        notifyAll();
+    }
+
+    public synchronized void esperarCambio(int versionLeida) {
+
+        while (version == versionLeida) {
             try {
                 wait();
             } catch (InterruptedException e) {
@@ -30,11 +38,6 @@ public class ZonaEspera {
                 return;
             }
         }
-    }
-
-    public synchronized void despertarTodas() {
-        version++;
-        notifyAll();
     }
 
     public synchronized int pendientes() {
@@ -42,11 +45,12 @@ public class ZonaEspera {
     }
 
     public synchronized boolean alcanzaUmbral() {
-        return pendientes >= umbral;
+        return pendientes + enEvaluacion >= umbral;
     }
 
     public synchronized void esperarVacia() {
-        while (pendientes > 0) {
+
+        while (pendientes + enEvaluacion > 0) {
             try {
                 wait();
             } catch (InterruptedException e) {
@@ -54,5 +58,31 @@ public class ZonaEspera {
                 return;
             }
         }
+    }
+
+    public synchronized boolean intentarAdmitir() {
+
+        if (pendientes + enEvaluacion >= umbral) {
+            return false;
+        }
+
+        enEvaluacion++;
+        return true;
+    }
+
+    public synchronized void registrarResultadoInicial(boolean conseguido) {
+
+        enEvaluacion--;
+
+        if (!conseguido) {
+            pendientes++;
+        }
+
+        notifyAll();
+    }
+
+    public synchronized void cancelarAdmitir() {
+        enEvaluacion--;
+        notifyAll();
     }
 }
