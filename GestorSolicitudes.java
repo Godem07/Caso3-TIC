@@ -36,7 +36,7 @@ public class GestorSolicitudes extends Thread {
 
         while (true) {
 
-            // 1. Intentar admitir una nueva MV
+            
             if (!zonaEspera.intentarAdmitir()) {
 
                 System.out.println(
@@ -56,10 +56,10 @@ public class GestorSolicitudes extends Thread {
                 continue;
             }
 
-            // 2. Retirar una solicitud del buzón
+            
             Solicitud solicitud = buzon.retirarSolicitud();
 
-            // 3. Comprobar si se obtuvo una solicitud
+            
             if (solicitud == null) {
 
                 zonaEspera.cancelarAdmitir();
@@ -77,7 +77,7 @@ public class GestorSolicitudes extends Thread {
                 continue;
             }
 
-            // 4. Crear la máquina virtual
+            
             MV mv = new MV(
                 solicitud,
                 controladorProcesadores,
@@ -90,15 +90,15 @@ public class GestorSolicitudes extends Thread {
                 "[" + getName() + "] creó MV para " + solicitud.getId()
             );
 
-            // 5. Registrar la MV en la lista compartida
+            
             synchronized (maquinasCreadas) {
                 maquinasCreadas.add(mv);
             }
 
-            // 6. Iniciar la máquina virtual
+            
             mv.start();
 
-            // 7. Esperar hasta que termine su primer intento
+            
             try {
 
                 mv.esperarPrimerIntento();
